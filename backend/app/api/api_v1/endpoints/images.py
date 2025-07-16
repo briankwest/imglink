@@ -17,6 +17,7 @@ from app.schemas.image import Image as ImageSchema, ImageCreate, ImageUpdate
 from app.services.image_processing import image_service
 from app.services.cache import cache_result, invalidate_cache
 from app.services.notification_service import NotificationService
+from app.services.storage_service import storage_service
 from app.models.tag import Tag, ImageTag
 
 router = APIRouter()
@@ -70,43 +71,50 @@ def process_upload_file(upload_file: UploadFile, user_id: int) -> dict:
     
     # Generate unique filename
     unique_filename = f"{user_id}_{uuid.uuid4()}{file_ext}"
-    file_path = os.path.join("uploads", unique_filename)
     
-    # Save original file
-    with open(file_path, "wb") as buffer:
-        buffer.write(upload_file.file.read())
+    # Read file data into memory
+    file_data = upload_file.file.read()
+    upload_file.file.seek(0)  # Reset for potential re-reading
     
     # Validate the uploaded image
-    is_valid, error_message = image_service.validate_image(file_path)
-    if not is_valid:
-        # Clean up the uploaded file
-        try:
-            os.remove(file_path)
-        except:
-            pass
-        raise HTTPException(status_code=400, detail=error_message)
+    try:
+        image = PILImage.open(io.BytesIO(file_data))
+        # Basic validation
+        if image.format not in ['JPEG', 'PNG', 'GIF', 'WEBP']:
+            raise HTTPException(status_code=400, detail="Invalid image format")
+        
+        # Extract metadata
+        metadata = {
+            'width': image.width,
+            'height': image.height,
+            'format': image.format
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
     
-    # Extract metadata
-    metadata = image_service.extract_metadata(file_path)
-    
-    # Process image (generate thumbnails and optimized versions)
-    generated_files = image_service.process_image(file_path, unique_filename)
+    # Upload to MinIO with thumbnails
+    try:
+        original_url, small_url, medium_url, large_url = storage_service.upload_image_with_thumbnails(
+            file_data=file_data,
+            file_name=unique_filename,
+            content_type=upload_file.content_type or 'image/jpeg'
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
     
     # Build result dictionary
     result = {
         "filename": unique_filename,
         "original_filename": upload_file.filename,
-        "file_size": os.path.getsize(file_path),
+        "file_size": len(file_data),
         "file_type": upload_file.content_type,
         "width": metadata.get('width', 0),
         "height": metadata.get('height', 0),
-        "url": f"/uploads/{unique_filename}",
+        "url": original_url,
+        "thumbnail_url": small_url or original_url,
+        "medium_url": medium_url or original_url,
+        "large_url": large_url or original_url,
     }
-    
-    # Set thumbnail URLs with fallbacks (don't add raw generated_files to avoid invalid fields)
-    result["thumbnail_url"] = generated_files.get("small_url", f"/uploads/{unique_filename}")
-    result["medium_url"] = generated_files.get("medium_url", f"/uploads/{unique_filename}")
-    result["large_url"] = generated_files.get("large_url", generated_files.get("optimized_url", f"/uploads/{unique_filename}"))
     
     return result
 
@@ -402,11 +410,18 @@ def delete_image(
     if image.owner_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    # Delete file from disk
+    # Delete files from MinIO
     try:
-        os.remove(os.path.join("uploads", image.filename))
-    except:
-        pass
+        # Delete original image
+        storage_service.delete_file(image.filename)
+        
+        # Delete thumbnails
+        base_name = os.path.splitext(image.filename)[0]
+        for size_name in ['small', 'medium', 'large']:
+            storage_service.delete_file(f"{base_name}_{size_name}.jpg")
+    except Exception as e:
+        print(f"Error deleting files from storage: {e}")
+        # Continue with database deletion even if file deletion fails
     
     db.delete(image)
     db.commit()
@@ -498,3 +513,32 @@ def check_if_liked(
     ).first()
     
     return {"liked": like is not None}
+
+
+@router.get("/file/{file_name}")
+async def serve_file(
+    file_name: str,
+    db: Session = Depends(get_db),
+) -> Any:
+    """Serve files from MinIO storage."""
+    from fastapi.responses import Response
+    
+    try:
+        # Get file from storage
+        file_data = storage_service.get_file(file_name)
+        
+        # Get file info for content type
+        file_info = storage_service.get_file_info(file_name)
+        content_type = file_info.get('content_type', 'application/octet-stream')
+        
+        # Return file as response
+        return Response(
+            content=file_data,
+            media_type=content_type,
+            headers={
+                "Cache-Control": "public, max-age=31536000",  # Cache for 1 year
+                "Content-Disposition": f"inline; filename={file_name}"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"File not found: {str(e)}")

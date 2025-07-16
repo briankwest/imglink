@@ -30,11 +30,8 @@ app.add_middleware(
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
 
-# Create uploads directory if it doesn't exist
-os.makedirs("uploads", exist_ok=True)
-
-# Mount static files
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Note: We're using MinIO/S3 for file storage, so no static file mounting needed
+# The uploads directory is kept for backward compatibility during migration
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_STR)

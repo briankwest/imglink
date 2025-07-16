@@ -10,6 +10,7 @@ from app.models.comment import Comment
 from app.models.like import Like
 from app.schemas.user import User as UserSchema
 from app.schemas.image import Image as ImageSchema
+from app.services.storage_service import storage_service
 
 router = APIRouter()
 
@@ -168,12 +169,19 @@ def admin_delete_image(
     if not image:
         raise HTTPException(status_code=404, detail="Image not found")
     
-    # Delete file from disk
-    import os
+    # Delete files from MinIO
     try:
-        os.remove(os.path.join("uploads", image.filename))
-    except:
-        pass
+        # Delete original image
+        storage_service.delete_file(image.filename)
+        
+        # Delete thumbnails
+        import os
+        base_name = os.path.splitext(image.filename)[0]
+        for size_name in ['small', 'medium', 'large']:
+            storage_service.delete_file(f"{base_name}_{size_name}.jpg")
+    except Exception as e:
+        print(f"Error deleting files from storage: {e}")
+        # Continue with database deletion even if file deletion fails
     
     db.delete(image)
     db.commit()
@@ -243,13 +251,20 @@ def delete_user(
     if user.is_superuser:
         raise HTTPException(status_code=400, detail="Cannot delete another superuser")
     
-    # Delete all user's images from disk
+    # Delete all user's images from MinIO
     import os
     for image in user.images:
         try:
-            os.remove(os.path.join("uploads", image.filename))
-        except:
-            pass
+            # Delete original image
+            storage_service.delete_file(image.filename)
+            
+            # Delete thumbnails
+            base_name = os.path.splitext(image.filename)[0]
+            for size_name in ['small', 'medium', 'large']:
+                storage_service.delete_file(f"{base_name}_{size_name}.jpg")
+        except Exception as e:
+            print(f"Error deleting files for image {image.id}: {e}")
+            # Continue with user deletion even if file deletion fails
     
     # Database cascade will handle deleting related records
     db.delete(user)
