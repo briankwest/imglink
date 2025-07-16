@@ -27,8 +27,45 @@ export function useNotifications(): UseNotificationsReturn {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
   const reconnectAttemptsRef = useRef(0)
 
+  // Fetch existing notifications from REST API
+  const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) return
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/v1/notifications/`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const fetchedNotifications: Notification[] = data.map((n: any) => ({
+          id: n.id.toString(),
+          type: n.type,
+          title: n.title,
+          message: n.message,
+          timestamp: n.created_at,
+          read: n.read,
+          data: n.data
+        }))
+        setNotifications(fetchedNotifications)
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    }
+  }, [isAuthenticated, accessToken])
+
   const connect = useCallback(() => {
     if (!isAuthenticated || !accessToken || wsRef.current?.readyState === WebSocket.OPEN) {
+      return
+    }
+    
+    // Prevent multiple simultaneous connection attempts
+    if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket connection already in progress')
       return
     }
 
@@ -47,6 +84,9 @@ export function useNotifications(): UseNotificationsReturn {
         console.log('WebSocket connected')
         setIsConnected(true)
         reconnectAttemptsRef.current = 0
+        
+        // Fetch existing notifications when connected
+        fetchNotifications()
         
         // Send heartbeat every 30 seconds
         const heartbeatInterval = setInterval(() => {
@@ -144,15 +184,21 @@ export function useNotifications(): UseNotificationsReturn {
           clearInterval((ws as any).heartbeatInterval)
         }
         
-        // Attempt to reconnect with exponential backoff
-        if (isAuthenticated && reconnectAttemptsRef.current < 5) {
+        // Attempt to reconnect with exponential backoff, but only for connection errors
+        if (isAuthenticated && reconnectAttemptsRef.current < 5 && event.code !== 4001) {
           const timeout = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000)
-          console.log(`Reconnecting in ${timeout}ms...`)
+          console.log(`Reconnecting in ${timeout}ms... (attempt ${reconnectAttemptsRef.current + 1}/5)`)
           
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptsRef.current++
             connect()
           }, timeout)
+        } else if (event.code === 4001) {
+          console.error('WebSocket authentication failed, not reconnecting')
+        } else if (reconnectAttemptsRef.current >= 5) {
+          console.error('Max reconnection attempts reached, falling back to REST API')
+          // Fall back to fetching notifications via REST API
+          fetchNotifications()
         }
       }
     } catch (error) {
@@ -171,51 +217,78 @@ export function useNotifications(): UseNotificationsReturn {
     }
   }, [])
 
-  const markAsRead = useCallback((notificationId: string) => {
+  const markAsRead = useCallback(async (notificationId: string) => {
+    // Optimistically update local state
     setNotifications(prev =>
       prev.map(notif =>
         notif.id === notificationId ? { ...notif, read: true } : notif
       )
     )
     
-    // Send mark as read message to server
+    // Send mark as read to backend
+    if (isAuthenticated && accessToken) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+        await fetch(`${apiUrl}/api/v1/notifications/${notificationId}/read`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      } catch (error) {
+        console.error('Error marking notification as read:', error)
+      }
+    }
+    
+    // Also send via WebSocket if connected
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'mark_read',
         notification_id: notificationId
       }))
     }
-  }, [])
+  }, [isAuthenticated, accessToken])
 
-  const clearAll = useCallback(() => {
-    setNotifications([])
-  }, [])
+  const clearAll = useCallback(async () => {
+    if (!isAuthenticated || !accessToken) return
 
-  // Connect when authenticated and page is loaded
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/v1/notifications/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (response.ok) {
+        // Clear all notifications from local state
+        setNotifications([])
+      }
+    } catch (error) {
+      console.error('Error deleting all notifications:', error)
+    }
+  }, [isAuthenticated, accessToken])
+
+  // Connect when authenticated and fetch notifications as fallback
   useEffect(() => {
     if (isAuthenticated && accessToken) {
-      // Wait for page to be fully loaded before connecting
-      if (document.readyState === 'complete') {
-        // Small delay to ensure everything is initialized
-        const timer = setTimeout(() => {
-          connect()
-        }, 500)
-        return () => {
-          clearTimeout(timer)
-          disconnect()
-        }
-      } else {
-        const handleLoad = () => {
-          const timer = setTimeout(() => {
-            connect()
-          }, 500)
-        }
-        
-        window.addEventListener('load', handleLoad)
-        return () => {
-          window.removeEventListener('load', handleLoad)
-          disconnect()
-        }
+      // Try to connect to WebSocket
+      const timer = setTimeout(() => {
+        connect()
+      }, 1000)
+      
+      // Always fetch notifications via REST API as fallback
+      const fallbackTimer = setTimeout(() => {
+        fetchNotifications()
+      }, 2000)
+      
+      return () => {
+        clearTimeout(timer)
+        clearTimeout(fallbackTimer)
+        disconnect()
       }
     } else {
       disconnect()
@@ -224,7 +297,7 @@ export function useNotifications(): UseNotificationsReturn {
     return () => {
       disconnect()
     }
-  }, [isAuthenticated, accessToken, connect, disconnect])
+  }, [isAuthenticated, accessToken, connect, disconnect, fetchNotifications])
 
   // Request browser notification permission
   useEffect(() => {

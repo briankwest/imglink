@@ -27,7 +27,7 @@ class CommentAuthor(BaseModel):
 class Comment(CommentBase):
     id: int
     image_id: int
-    author_id: int
+    user_id: int
     parent_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime

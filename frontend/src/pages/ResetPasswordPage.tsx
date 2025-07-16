@@ -58,20 +58,20 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <CheckCircleIcon className="mx-auto h-16 w-16 text-green-500" />
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            <CheckCircleIcon className="mx-auto h-16 w-16 text-green-500 dark:text-green-400" />
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
               Password Reset Successfully
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Your password has been reset. You can now sign in with your new password.
             </p>
             <div className="mt-6">
               <Link
                 to="/login"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
               >
                 Sign In Now
               </Link>
@@ -84,26 +84,26 @@ export default function ResetPasswordPage() {
 
   if (!token || error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
-            <ExclamationCircleIcon className="mx-auto h-16 w-16 text-red-500" />
-            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+            <ExclamationCircleIcon className="mx-auto h-16 w-16 text-red-500 dark:text-red-400" />
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
               Invalid Reset Link
             </h2>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               {error || 'This password reset link is invalid or has expired.'}
             </p>
             <div className="mt-6 space-x-4">
               <Link
                 to="/forgot-password"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
               >
                 Request New Link
               </Link>
               <Link
                 to="/login"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 Back to Sign In
               </Link>
@@ -115,30 +115,30 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="flex justify-center">
-            <KeyIcon className="h-12 w-12 text-indigo-600" />
+            <KeyIcon className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             Reset your password
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Enter your new password below
           </p>
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
+            <div className="rounded-md bg-red-50 dark:bg-red-900/50 p-4">
+              <div className="text-sm text-red-700 dark:text-red-400">{error}</div>
             </div>
           )}
           
           <div className="space-y-4">
             <div>
-              <label htmlFor="new_password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="new_password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 New Password
               </label>
               <input
@@ -147,16 +147,16 @@ export default function ResetPasswordPage() {
                   minLength: { value: 8, message: 'Password must be at least 8 characters' }
                 })}
                 type="password"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Enter your new password"
               />
               {errors.new_password && (
-                <p className="mt-1 text-sm text-red-600">{errors.new_password.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.new_password.message}</p>
               )}
             </div>
             
             <div>
-              <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Confirm New Password
               </label>
               <input
@@ -165,11 +165,11 @@ export default function ResetPasswordPage() {
                   validate: value => value === new_password || 'Passwords do not match'
                 })}
                 type="password"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Confirm your new password"
               />
               {errors.confirm_password && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirm_password.message}</p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.confirm_password.message}</p>
               )}
             </div>
           </div>
@@ -178,7 +178,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Resetting...' : 'Reset Password'}
             </button>

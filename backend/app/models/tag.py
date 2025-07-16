@@ -32,7 +32,7 @@ class ImageTag(Base):
     tag_id = Column(Integer, ForeignKey("tags.id", ondelete="CASCADE"), nullable=False, primary_key=True)
     
     # Relationships
-    image = relationship("Image", backref="tags")
+    image = relationship("Image", back_populates="tags")
     tag = relationship("Tag", back_populates="images")
     
     def __repr__(self):

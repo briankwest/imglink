@@ -30,9 +30,6 @@ class NotificationService:
     ) -> Notification:
         """Create a notification in the database"""
         
-        # Convert data dict to JSON string if provided
-        data_str = json.dumps(data) if data else None
-        
         # Create notification
         notification = Notification(
             user_id=user_id,
@@ -42,7 +39,7 @@ class NotificationService:
             related_user_id=related_user_id,
             related_image_id=related_image_id,
             related_album_id=related_album_id,
-            data=data_str
+            data=data
         )
         
         db.add(notification)
@@ -50,23 +47,26 @@ class NotificationService:
         db.refresh(notification)
         
         # Send real-time notification if user is online
-        # Note: We'll handle this synchronously for now since we're in a sync context
         try:
             from app.core.websocket import manager
             import asyncio
             
-            # Get or create event loop
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-            
-            if loop and loop.is_running():
-                # We're in an async context, create task
-                asyncio.create_task(NotificationService._send_realtime_notification(notification))
+            # Check if user is online before attempting to send
+            if manager.is_user_online(user_id):
+                # Get or create event loop
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+                
+                if loop and loop.is_running():
+                    # We're in an async context, create task
+                    asyncio.create_task(NotificationService._send_realtime_notification(notification))
+                else:
+                    # We're in a sync context, run synchronously
+                    asyncio.run(NotificationService._send_realtime_notification(notification))
             else:
-                # We're in a sync context, run synchronously
-                asyncio.run(NotificationService._send_realtime_notification(notification))
+                print(f"User {user_id} is not online, skipping real-time notification")
         except Exception as e:
             # Don't fail notification creation if real-time delivery fails
             print(f"Failed to send real-time notification: {e}")
@@ -88,7 +88,7 @@ class NotificationService:
                     "title": notification.title,
                     "message": notification.message,
                     "timestamp": notification.created_at.isoformat(),
-                    "data": json.loads(notification.data) if notification.data else None
+                    "data": notification.data
                 },
                 notification.user_id
             )

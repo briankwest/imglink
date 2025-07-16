@@ -1,7 +1,7 @@
 """
 Notification schemas
 """
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -15,7 +15,7 @@ class NotificationBase(BaseModel):
     related_user_id: Optional[int] = None
     related_image_id: Optional[int] = None
     related_album_id: Optional[int] = None
-    data: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
 
 
 class NotificationCreate(NotificationBase):

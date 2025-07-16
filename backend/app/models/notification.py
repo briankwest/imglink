@@ -2,7 +2,7 @@
 Notification model for real-time notifications
 """
 from typing import TYPE_CHECKING
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, Text
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, JSON, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -55,7 +55,7 @@ class Notification(Base):
     
     # Additional data (JSON field for flexibility)
     # Can store things like comment text preview, etc.
-    data = Column(Text, nullable=True)  # Store as JSON string
+    data = Column(JSON, nullable=True)
     
     # Relationships
     user = relationship("User", foreign_keys=[user_id], back_populates="notifications")

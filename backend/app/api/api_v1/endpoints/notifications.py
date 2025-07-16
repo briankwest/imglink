@@ -105,3 +105,40 @@ def delete_notification(
     db.commit()
     
     return {"message": "Notification deleted successfully"}
+
+
+@router.post("/test")
+def create_test_notification(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Create a test notification for the current user"""
+    from app.models.notification import NotificationType
+    
+    notification = NotificationService.create_notification(
+        db,
+        user_id=current_user.id,
+        type=NotificationType.SYSTEM,
+        title="Test Notification",
+        message="This is a test notification to verify the system is working correctly",
+        data={"test": True, "timestamp": "now"}
+    )
+    
+    return {"message": "Test notification created", "notification_id": notification.id}
+
+
+@router.delete("/")
+def delete_all_notifications(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Delete all notifications for the current user"""
+    count = db.query(Notification).filter(
+        Notification.user_id == current_user.id
+    ).delete()
+    
+    db.commit()
+    
+    return {"message": f"{count} notifications deleted"}

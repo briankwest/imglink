@@ -192,16 +192,23 @@ def verify_email(
             detail="Verification token has expired. Please request a new one."
         )
     
-    # Verify the user
+    # Check if user is already verified to prevent duplicate welcome emails
+    if user.is_verified:
+        return {"message": "Email already verified"}
+    
+    # Verify the user atomically
     user.clear_email_verification_token()
     db.commit()
     
-    # Send welcome email in background
-    background_tasks.add_task(
-        email_service.send_welcome_email,
-        user.email,
-        user.username
-    )
+    # Double-check after commit to ensure verification succeeded
+    db.refresh(user)
+    if user.is_verified:
+        # Send welcome email in background (only once after successful verification)
+        background_tasks.add_task(
+            email_service.send_welcome_email,
+            user.email,
+            user.username
+        )
     
     return {"message": "Email verified successfully"}
 

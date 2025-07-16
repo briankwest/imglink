@@ -68,7 +68,7 @@ def create_comment(
     comment = Comment(
         content=comment_in.content,
         image_id=image_id,
-        author_id=current_user.id,
+        user_id=current_user.id,
         parent_id=comment_in.parent_id
     )
     
@@ -80,10 +80,10 @@ def create_comment(
     if comment_in.parent_id:
         # This is a reply - notify the parent comment author
         parent_comment = db.query(Comment).filter(Comment.id == comment_in.parent_id).first()
-        if parent_comment and parent_comment.author_id != current_user.id:
+        if parent_comment and parent_comment.user_id != current_user.id:
             NotificationService.notify_reply(
                 db,
-                parent_comment_author_id=parent_comment.author_id,
+                parent_comment_author_id=parent_comment.user_id,
                 replier=current_user,
                 image_id=image.id,
                 image_title=image.title or "Untitled",
@@ -116,7 +116,7 @@ def update_comment(
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     
-    if comment.author_id != current_user.id:
+    if comment.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     comment.content = comment_in.content
@@ -137,7 +137,7 @@ def delete_comment(
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     
-    if comment.author_id != current_user.id:
+    if comment.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
     db.delete(comment)

@@ -41,6 +41,7 @@ class Image(Base):
     albums = relationship("AlbumImage", back_populates="image", cascade="all, delete-orphan")
     comments = relationship("Comment", back_populates="image", cascade="all, delete-orphan")
     likes = relationship("Like", back_populates="image", cascade="all, delete-orphan")
+    tags = relationship("ImageTag", back_populates="image", cascade="all, delete-orphan")
     
     @property
     def like_count(self):
