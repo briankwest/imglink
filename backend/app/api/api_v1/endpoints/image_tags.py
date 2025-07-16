@@ -1,7 +1,6 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-import re
 
 from app.api.deps import get_db, get_current_active_user
 from app.models.user import User
@@ -15,19 +14,6 @@ from app.schemas.tag import (
 router = APIRouter()
 
 
-def create_slug(name: str) -> str:
-    """Create a URL-friendly slug from tag name."""
-    # Convert to lowercase
-    slug = name.lower()
-    # Replace spaces with hyphens
-    slug = re.sub(r'\s+', '-', slug)
-    # Remove any characters that aren't alphanumeric or hyphens
-    slug = re.sub(r'[^a-z0-9-]', '', slug)
-    # Remove multiple consecutive hyphens
-    slug = re.sub(r'-+', '-', slug)
-    # Remove leading and trailing hyphens
-    slug = slug.strip('-')
-    return slug
 
 
 @router.post("/{image_id}/tags", response_model=List[TagSchema])
@@ -73,21 +59,13 @@ def add_tags_to_image(
         # Find or create tag
         tag = db.query(Tag).filter(Tag.name == tag_name).first()
         if not tag:
-            tag = Tag(
-                name=tag_name,
-                slug=create_slug(tag_name),
-                usage_count=0,
-                created_by=current_user.id
-            )
+            tag = Tag(name=tag_name)
             db.add(tag)
             db.flush()
         
         # Create image-tag association
         image_tag = ImageTag(image_id=image_id, tag_id=tag.id)
         db.add(image_tag)
-        
-        # Increment usage count
-        tag.usage_count += 1
         
         added_tags.append(tag)
     
@@ -138,10 +116,8 @@ def remove_tag_from_image(
     
     db.delete(image_tag)
     
-    # Decrement usage count
-    tag.usage_count = max(0, tag.usage_count - 1)
-    
-    # Delete tag if no longer used
+    # Check if tag is no longer used (after deleting the image_tag)
+    db.flush()  # Make sure the delete is committed
     if tag.usage_count == 0:
         db.delete(tag)
     

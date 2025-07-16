@@ -12,20 +12,14 @@ class Follow(Base):
     """
     __tablename__ = "follows"
     
-    id = Column(Integer, primary_key=True, index=True)
-    
+    # Composite primary key (no id column)
     # User who is following
-    follower_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    follower_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, primary_key=True, index=True)
     # User being followed
-    following_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    following_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, primary_key=True, index=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     follower = relationship("User", foreign_keys=[follower_id], backref="following_relationships")
     following = relationship("User", foreign_keys=[following_id], backref="follower_relationships")
-    
-    # Ensure a user can't follow the same person twice
-    __table_args__ = (
-        UniqueConstraint('follower_id', 'following_id', name='unique_follow'),
-    )

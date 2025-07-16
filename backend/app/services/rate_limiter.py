@@ -98,16 +98,21 @@ class RateLimiter:
             # Calculate reset time (when oldest request expires)
             oldest = self.redis_client.zrange(key, 0, 0, withscores=True)
             if oldest:
-                reset_time = int(oldest[0][1] + window)
+                oldest_timestamp = oldest[0][1]
+                reset_time = int(oldest_timestamp + window)
+                # Debug log if reset time seems wrong
+                if reset_time - now > window * 2:
+                    logger.warning(f"Unusual reset time detected: oldest={oldest_timestamp}, now={now}, window={window}, reset={reset_time}")
             else:
                 reset_time = int(now + window)
             
             remaining = max(0, limit - current_count)
             
             if current_count < limit:
-                # Add current request
-                self.redis_client.zadd(key, {f"{now}": now})
-                self.redis_client.expire(key, window)
+                # Add current request with timestamp as score
+                # Use a unique member name to avoid overwriting
+                self.redis_client.zadd(key, {f"req:{now}:{current_count}": now})
+                self.redis_client.expire(key, window + 60)  # Add buffer to TTL
                 
                 return True, {
                     "limit": limit,
@@ -130,13 +135,39 @@ class RateLimiter:
             # On error, allow request but log it
             return True, {"remaining": limit, "reset": 0}
     
-    def get_endpoint_limits(self, endpoint: str, user_tier: str = "anonymous") -> Dict[str, int]:
+    def get_endpoint_limits(self, endpoint: str, user_tier: str = "anonymous", db=None) -> Dict[str, int]:
         """
         Get rate limits for an endpoint based on user tier.
         
         Returns dict with 'requests' and 'window' keys.
         """
-        # Define rate limits per endpoint and tier
+        # Try to get from database first
+        if db:
+            try:
+                from app.models.rate_limit import RateLimit
+                
+                # Try exact endpoint match
+                rate_limit = db.query(RateLimit).filter(
+                    RateLimit.endpoint == endpoint,
+                    RateLimit.tier == user_tier
+                ).first()
+                
+                # If not found, try default
+                if not rate_limit:
+                    rate_limit = db.query(RateLimit).filter(
+                        RateLimit.endpoint == "default",
+                        RateLimit.tier == user_tier
+                    ).first()
+                
+                if rate_limit:
+                    return {
+                        "requests": rate_limit.requests,
+                        "window": rate_limit.window
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to get rate limits from database: {e}")
+        
+        # Fallback to hardcoded limits
         limits = {
             # Authentication endpoints
             "/api/v1/auth/login": {
@@ -170,6 +201,31 @@ class RateLimiter:
         tier_limits = endpoint_limits.get(user_tier, endpoint_limits["anonymous"])
         
         return tier_limits
+    
+    def clear_limits(self, identifier: str = None, endpoint: str = None):
+        """Clear rate limits for debugging/admin purposes."""
+        if not self.redis_client:
+            return
+        
+        try:
+            if identifier and endpoint:
+                # Clear specific endpoint for identifier
+                key = self._get_key(identifier, endpoint)
+                self.redis_client.delete(key)
+            elif identifier:
+                # Clear all endpoints for identifier
+                keys = self.redis_client.keys(f"rate_limit:*:{identifier}")
+                if keys:
+                    self.redis_client.delete(*keys)
+            else:
+                # Clear all rate limits
+                keys = self.redis_client.keys("rate_limit:*")
+                if keys:
+                    self.redis_client.delete(*keys)
+            
+            logger.info(f"Cleared rate limits: identifier={identifier}, endpoint={endpoint}")
+        except Exception as e:
+            logger.error(f"Error clearing rate limits: {e}")
     
     def get_stats(self, identifier: str, endpoint: str = "*") -> Dict[str, Any]:
         """Get rate limiting statistics for an identifier."""

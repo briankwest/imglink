@@ -137,6 +137,7 @@ export default function LoginPage() {
               <input
                 {...register('username', { required: 'Username or email is required' })}
                 type="text"
+                autoComplete="username"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Enter your username or email"
               />
@@ -152,6 +153,7 @@ export default function LoginPage() {
               <input
                 {...register('password', { required: 'Password is required' })}
                 type="password"
+                autoComplete="current-password"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Enter your password"
               />

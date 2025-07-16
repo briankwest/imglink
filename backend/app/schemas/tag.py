@@ -29,10 +29,8 @@ class TagUpdate(TagBase):
 
 class Tag(TagBase):
     id: int
-    slug: str
     usage_count: int
     created_at: datetime
-    created_by: Optional[int]
     
     class Config:
         from_attributes = True
@@ -85,7 +83,6 @@ class ImageTagRemove(BaseModel):
 
 class PopularTag(BaseModel):
     name: str
-    slug: str
     usage_count: int
     
     class Config:

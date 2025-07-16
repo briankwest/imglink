@@ -8,8 +8,8 @@ from app.core.database import engine, Base
 from app.api.api_v1.api import api_router
 from app.api.middleware.rate_limit import RateLimitMiddleware
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Note: Database tables are created via Alembic migrations
+# Do NOT use Base.metadata.create_all as it can create inconsistent schemas
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

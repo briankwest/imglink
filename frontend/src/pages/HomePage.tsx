@@ -104,15 +104,12 @@ export default function HomePage() {
 
       {/* Main Content Area */}
       <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 ${isAuthenticated ? 'pt-8' : ''}`}>
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Images Section - Takes up 3 columns on large screens */}
-          <div className="lg:col-span-3">
+        {images.length === 0 ? (
+          // When no images, center the upload element across full width
+          <div className="text-center py-12">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
               {isAuthenticated ? 'Community Images' : 'Recent Uploads'}
             </h2>
-
-        {images.length === 0 ? (
-          <div className="text-center py-12">
             <PhotoIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No images yet</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -129,6 +126,13 @@ export default function HomePage() {
             </div>
           </div>
         ) : (
+          // When images exist, use grid layout with sidebar
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Images Section - Takes up 3 columns on large screens */}
+            <div className="lg:col-span-3">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+                {isAuthenticated ? 'Community Images' : 'Recent Uploads'}
+              </h2>
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {images.map((image) => (
@@ -212,15 +216,15 @@ export default function HomePage() {
                 </div>
               )}
             </div>
-          )}
-          </div>
+            </div>
 
-          {/* Sidebar - Takes up 1 column on large screens */}
-          <div className="lg:col-span-1">
-            {/* Popular Tags */}
-            <PopularTags limit={20} />
+            {/* Sidebar - Takes up 1 column on large screens */}
+            <div className="lg:col-span-1">
+              {/* Popular Tags */}
+              <PopularTags limit={20} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

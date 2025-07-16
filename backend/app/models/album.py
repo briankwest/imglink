@@ -20,8 +20,6 @@ class Album(Base):
     description = Column(Text)
     cover_image_id = Column(Integer, ForeignKey("images.id", ondelete="SET NULL"))
     privacy = Column(Enum(AlbumPrivacy), default=AlbumPrivacy.PUBLIC)
-    delete_hash = Column(String(100), unique=True, index=True)
-    views = Column(Integer, default=0)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -35,11 +33,10 @@ class Album(Base):
 class AlbumImage(Base):
     __tablename__ = "album_images"
 
-    id = Column(Integer, primary_key=True, index=True)
-    album_id = Column(Integer, ForeignKey("albums.id"), nullable=False)
-    image_id = Column(Integer, ForeignKey("images.id"), nullable=False)
+    # Composite primary key (no id column)
+    album_id = Column(Integer, ForeignKey("albums.id"), nullable=False, primary_key=True)
+    image_id = Column(Integer, ForeignKey("images.id"), nullable=False, primary_key=True)
     position = Column(Integer, default=0)
-    added_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
     album = relationship("Album", back_populates="images")

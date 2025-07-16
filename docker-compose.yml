@@ -58,6 +58,10 @@ services:
       DATABASE_URL: postgresql://imglink:imglink@db:5432/imglink
       REDIS_URL: redis://redis:6379/0
       S3_ENDPOINT: http://minio:9000
+      # Admin user setup (optional - defaults provided)
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-AdminPass123}
     ports:
       - "8000:8000"
     volumes:
@@ -70,7 +74,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:

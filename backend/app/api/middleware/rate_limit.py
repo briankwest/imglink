@@ -69,7 +69,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         endpoint = request.url.path
         
         # Get rate limits for this endpoint and user tier
-        limits = rate_limiter.get_endpoint_limits(endpoint, user_tier)
+        db = None
+        try:
+            db = next(get_db())
+            limits = rate_limiter.get_endpoint_limits(endpoint, user_tier, db)
+        except Exception as e:
+            logger.debug(f"Error getting DB for rate limits: {e}")
+            limits = rate_limiter.get_endpoint_limits(endpoint, user_tier)
+        finally:
+            if db:
+                db.close()
         
         # Check rate limit
         allowed, metadata = rate_limiter.check_rate_limit(

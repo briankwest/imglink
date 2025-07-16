@@ -1,4 +1,5 @@
 from typing import Any, List
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
@@ -11,6 +12,7 @@ from app.models.like import Like
 from app.schemas.user import User as UserSchema
 from app.schemas.image import Image as ImageSchema
 from app.services.storage_service import storage_service
+from app.models.rate_limit import RateLimit
 
 router = APIRouter()
 
@@ -271,3 +273,142 @@ def delete_user(
     db.commit()
     
     return {"message": "User deleted successfully"}
+
+
+@router.get("/rate-limits")
+def get_rate_limits(
+    *,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Get all rate limit configurations"""
+    check_admin_permissions(current_user)
+    
+    rate_limits = db.query(RateLimit).order_by(RateLimit.endpoint, RateLimit.tier).all()
+    
+    # Group by endpoint for better display
+    grouped_limits = {}
+    for limit in rate_limits:
+        if limit.endpoint not in grouped_limits:
+            grouped_limits[limit.endpoint] = {}
+        
+        grouped_limits[limit.endpoint][limit.tier] = {
+            "id": limit.id,
+            "requests": limit.requests,
+            "window": limit.window,
+            "window_text": f"{limit.window // 3600}h" if limit.window >= 3600 else f"{limit.window // 60}m",
+            "description": limit.description
+        }
+    
+    return grouped_limits
+
+
+@router.put("/rate-limits/{rate_limit_id}")
+def update_rate_limit(
+    *,
+    db: Session = Depends(get_db),
+    rate_limit_id: int,
+    requests: int,
+    window: int,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Update a specific rate limit configuration"""
+    check_admin_permissions(current_user)
+    
+    rate_limit = db.query(RateLimit).filter(RateLimit.id == rate_limit_id).first()
+    if not rate_limit:
+        raise HTTPException(status_code=404, detail="Rate limit configuration not found")
+    
+    # Update values
+    rate_limit.requests = requests
+    rate_limit.window = window
+    
+    db.commit()
+    db.refresh(rate_limit)
+    
+    return {
+        "id": rate_limit.id,
+        "endpoint": rate_limit.endpoint,
+        "tier": rate_limit.tier,
+        "requests": rate_limit.requests,
+        "window": rate_limit.window,
+        "window_text": f"{rate_limit.window // 3600}h" if rate_limit.window >= 3600 else f"{rate_limit.window // 60}m",
+        "description": rate_limit.description,
+        "updated_at": rate_limit.updated_at
+    }
+
+
+@router.post("/rate-limits")
+def create_rate_limit(
+    *,
+    db: Session = Depends(get_db),
+    endpoint: str,
+    tier: str,
+    requests: int,
+    window: int,
+    description: str = None,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Create a new rate limit configuration"""
+    check_admin_permissions(current_user)
+    
+    # Check if already exists
+    existing = db.query(RateLimit).filter(
+        RateLimit.endpoint == endpoint,
+        RateLimit.tier == tier
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Rate limit configuration already exists for this endpoint and tier")
+    
+    # Create new rate limit
+    rate_limit = RateLimit(
+        endpoint=endpoint,
+        tier=tier,
+        requests=requests,
+        window=window,
+        description=description
+    )
+    
+    db.add(rate_limit)
+    db.commit()
+    db.refresh(rate_limit)
+    
+    return {
+        "id": rate_limit.id,
+        "endpoint": rate_limit.endpoint,
+        "tier": rate_limit.tier,
+        "requests": rate_limit.requests,
+        "window": rate_limit.window,
+        "window_text": f"{rate_limit.window // 3600}h" if rate_limit.window >= 3600 else f"{rate_limit.window // 60}m",
+        "description": rate_limit.description,
+        "created_at": rate_limit.created_at
+    }
+
+
+@router.post("/rate-limits/clear")
+def clear_rate_limits(
+    *,
+    db: Session = Depends(get_db),
+    identifier: str = None,
+    endpoint: str = None,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """Clear rate limits from Redis cache"""
+    check_admin_permissions(current_user)
+    
+    from app.services.rate_limiter import rate_limiter
+    
+    rate_limiter.clear_limits(identifier=identifier, endpoint=endpoint)
+    
+    # Get some stats
+    cleared_info = []
+    if identifier:
+        cleared_info.append(f"identifier={identifier}")
+    if endpoint:
+        cleared_info.append(f"endpoint={endpoint}")
+    
+    return {
+        "message": f"Rate limits cleared{' for ' + ', '.join(cleared_info) if cleared_info else ' (all)'}",
+        "cleared_at": datetime.utcnow()
+    }

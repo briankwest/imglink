@@ -2,7 +2,6 @@ from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
-import re
 
 from app.api.deps import get_db, get_current_user, get_current_active_user
 from app.models.user import User
@@ -20,19 +19,6 @@ from app.schemas.tag import (
 router = APIRouter()
 
 
-def create_slug(name: str) -> str:
-    """Create a URL-friendly slug from tag name."""
-    # Convert to lowercase
-    slug = name.lower()
-    # Replace spaces with hyphens
-    slug = re.sub(r'\s+', '-', slug)
-    # Remove any characters that aren't alphanumeric or hyphens
-    slug = re.sub(r'[^a-z0-9-]', '', slug)
-    # Remove multiple consecutive hyphens
-    slug = re.sub(r'-+', '-', slug)
-    # Remove leading and trailing hyphens
-    slug = slug.strip('-')
-    return slug
 
 
 @router.get("/popular", response_model=List[PopularTag])
@@ -44,14 +30,34 @@ def get_popular_tags(
     """
     Get most popular tags by usage count.
     """
-    tags = db.query(Tag).filter(
-        Tag.usage_count > 0
+    # Query tags with usage count using a subquery
+    tag_usage = db.query(
+        Tag.id,
+        Tag.name,
+        func.count(ImageTag.image_id).label('usage_count')
+    ).outerjoin(ImageTag).group_by(Tag.id, Tag.name).subquery()
+    
+    # Get tags with usage > 0, ordered by usage count
+    popular_tags = db.query(
+        tag_usage.c.id,
+        tag_usage.c.name,
+        tag_usage.c.usage_count
+    ).filter(
+        tag_usage.c.usage_count > 0
     ).order_by(
-        desc(Tag.usage_count),
-        Tag.name
+        desc(tag_usage.c.usage_count),
+        tag_usage.c.name
     ).limit(limit).all()
     
-    return tags
+    # Convert to response format
+    return [
+        {
+            "id": tag.id,
+            "name": tag.name,
+            "usage_count": tag.usage_count
+        }
+        for tag in popular_tags
+    ]
 
 
 @router.get("/search", response_model=List[TagSchema])
@@ -66,29 +72,36 @@ def search_tags(
     """
     q = q.lower().strip()
     
+    # Use a subquery to count usage and order by it
+    usage_count_subquery = (
+        db.query(func.count(ImageTag.tag_id))
+        .filter(ImageTag.tag_id == Tag.id)
+        .scalar_subquery()
+    )
+    
     tags = db.query(Tag).filter(
         Tag.name.ilike(f"%{q}%")
     ).order_by(
-        desc(Tag.usage_count),
+        desc(usage_count_subquery),
         Tag.name
     ).limit(limit).all()
     
     return tags
 
 
-@router.get("/by-slug/{tag_slug}/images", response_model=dict)
+@router.get("/by-name/{tag_name}/images", response_model=dict)
 def get_images_by_tag(
     *,
     db: Session = Depends(get_db),
-    tag_slug: str,
+    tag_name: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100)
 ) -> Any:
     """
     Get all public images with a specific tag.
     """
-    # Find tag by slug
-    tag = db.query(Tag).filter(Tag.slug == tag_slug).first()
+    # Find tag by name
+    tag = db.query(Tag).filter(Tag.name == tag_name.lower()).first()
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
     
@@ -113,7 +126,6 @@ def get_images_by_tag(
     return {
         "tag": {
             "name": tag.name,
-            "slug": tag.slug,
             "usage_count": tag.usage_count
         },
         "images": image_data,

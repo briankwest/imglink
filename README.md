@@ -124,14 +124,26 @@ ImgLink is a full-featured image sharing platform inspired by Imgur, built with 
 git clone https://github.com/briankwest/imglink.git
 cd imglink
 
-# Start the development environment
-./deploy.sh dev
+# Copy environment file
+cp .env.example .env
+
+# Start the application
+docker-compose up -d
 
 # Access the application
 # Frontend: http://localhost:5173
 # Backend API: http://localhost:8000
 # API Docs: http://localhost:8000/docs
 ```
+
+**Default Admin Credentials:**
+- Email: admin@example.com
+- Username: admin
+- Password: AdminPass123
+
+⚠️ **Important**: Change these credentials after first login!
+
+For detailed setup instructions, see [SETUP.md](SETUP.md).
 
 ### Manual Setup
 

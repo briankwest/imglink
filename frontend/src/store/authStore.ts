@@ -81,8 +81,17 @@ export const useAuthStore = create<AuthState>()(
             password,
           })
 
-          // Auto login after registration
-          await get().login(username, password)
+          // Try to auto login after registration
+          try {
+            await get().login(username, password)
+          } catch (loginError: any) {
+            // If login fails due to email verification, throw specific error
+            if (loginError.response?.data?.detail?.includes('Email not verified')) {
+              throw new Error('EMAIL_VERIFICATION_REQUIRED')
+            }
+            // Re-throw other login errors
+            throw loginError
+          }
         } catch (error) {
           throw error
         }

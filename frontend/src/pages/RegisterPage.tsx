@@ -16,6 +16,8 @@ export default function RegisterPage() {
   const { register: registerUser } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showVerification, setShowVerification] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
 
   const {
     register,
@@ -34,10 +36,56 @@ export default function RegisterPage() {
       await registerUser(data.username, data.email, data.password)
       navigate('/dashboard')
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.')
+      if (err.message === 'EMAIL_VERIFICATION_REQUIRED') {
+        setUserEmail(data.email)
+        setShowVerification(true)
+      } else {
+        setError(err.response?.data?.detail || 'Registration failed. Please try again.')
+      }
     } finally {
       setLoading(false)
     }
+  }
+
+  if (showVerification) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div>
+            <div className="flex justify-center">
+              <PhotoIcon className="h-12 w-12 text-indigo-600" />
+            </div>
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Check your email
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              We've sent a verification link to{' '}
+              <span className="font-medium text-indigo-600">{userEmail}</span>
+            </p>
+          </div>
+          
+          <div className="rounded-md bg-blue-50 p-4">
+            <div className="text-sm text-blue-700">
+              <p className="mb-2">
+                Please check your email and click the verification link to activate your account.
+              </p>
+              <p>
+                Once verified, you can sign in to your account.
+              </p>
+            </div>
+          </div>
+          
+          <div>
+            <Link
+              to="/login"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Go to Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -79,6 +127,7 @@ export default function RegisterPage() {
                   maxLength: { value: 50, message: 'Username cannot exceed 50 characters' }
                 })}
                 type="text"
+                autoComplete="username"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Choose a username"
               />
@@ -100,6 +149,7 @@ export default function RegisterPage() {
                   }
                 })}
                 type="email"
+                autoComplete="email"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Enter your email"
               />
@@ -118,6 +168,7 @@ export default function RegisterPage() {
                   minLength: { value: 8, message: 'Password must be at least 8 characters' }
                 })}
                 type="password"
+                autoComplete="new-password"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Create a password"
               />
@@ -136,6 +187,7 @@ export default function RegisterPage() {
                   validate: value => value === password || 'Passwords do not match'
                 })}
                 type="password"
+                autoComplete="new-password"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Confirm your password"
               />
