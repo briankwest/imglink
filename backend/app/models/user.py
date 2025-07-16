@@ -19,6 +19,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)
+    tier = Column(String(20), default="standard")  # "standard", "premium", etc.
     
     # Email verification
     email_verification_token = Column(String(255))

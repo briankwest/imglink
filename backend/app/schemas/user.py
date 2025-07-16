@@ -29,6 +29,7 @@ class UserInDBBase(UserBase):
     is_active: bool
     is_verified: bool
     is_superuser: bool
+    tier: str = "standard"
     created_at: datetime
     updated_at: datetime
 

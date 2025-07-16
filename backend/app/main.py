@@ -6,6 +6,7 @@ import os
 from app.core.config import settings
 from app.core.database import engine, Base
 from app.api.api_v1.api import api_router
+from app.api.middleware.rate_limit import RateLimitMiddleware
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -16,6 +17,9 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware)
+
 # Set CORS
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +27,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
 
 # Create uploads directory if it doesn't exist

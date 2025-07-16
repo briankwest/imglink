@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.api_v1.endpoints import auth, users, images, albums, comments, admin, health, websocket, notifications, search, tags, image_tags
+from app.api.api_v1.endpoints import auth, users, images, albums, comments, admin, health, websocket, notifications, search, tags, image_tags, rate_limit
 
 api_router = APIRouter()
 
@@ -16,3 +16,4 @@ api_router.include_router(websocket.router, tags=["websocket"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 api_router.include_router(search.router, prefix="/search", tags=["search"])
 api_router.include_router(tags.router, prefix="/tags", tags=["tags"])
+api_router.include_router(rate_limit.router, prefix="/rate-limit", tags=["rate-limit"])
