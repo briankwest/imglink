@@ -20,6 +20,8 @@ class Album(Base):
     description = Column(Text)
     cover_image_id = Column(Integer, ForeignKey("images.id", ondelete="SET NULL"))
     privacy = Column(Enum(AlbumPrivacy), default=AlbumPrivacy.PUBLIC)
+    delete_hash = Column(String(100), unique=True, index=True)
+    views = Column(Integer, default=0)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

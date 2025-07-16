@@ -51,7 +51,7 @@ def get_user_suggestions(
     if len(suggestions) < limit:
         popular_users = db.query(
             User,
-            func.count(Follow.id).label('follower_count')
+            func.count(Follow.follower_id).label('follower_count')
         ).outerjoin(
             Follow, Follow.following_id == User.id
         ).filter(
@@ -61,7 +61,7 @@ def get_user_suggestions(
                 User.id.notin_([s[0].id for s in suggestions])  # Not already in suggestions
             )
         ).group_by(User.id).order_by(
-            func.count(Follow.id).desc()
+            func.count(Follow.follower_id).desc()
         ).limit(limit - len(suggestions)).all()
         
         suggestions.extend(popular_users)

@@ -5,13 +5,14 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, and_, desc
+from sqlalchemy import or_, and_, desc, func
 
 from app.api import deps
 from app.models.user import User
 from app.models.image import Image
 from app.models.follow import Follow
 from app.models.album import Album
+from app.models.like import Like
 from app.schemas.image import Image as ImageSchema
 
 router = APIRouter()
@@ -90,8 +91,10 @@ def get_explore_feed(
     
     # Order by popularity (combination of likes and views)
     # This is a simple algorithm - could be improved with time decay
-    images = query.order_by(
-        desc(Image.like_count + Image.views / 10)
+    images = query.outerjoin(
+        Like, Like.image_id == Image.id
+    ).group_by(Image.id).order_by(
+        desc(func.count(Like.image_id) + Image.views / 10)
     ).offset(skip).limit(limit).all()
     
     return images
@@ -156,8 +159,11 @@ def get_mixed_feed(
             existing_ids = [img.id for img in following_images]
             explore_query = explore_query.filter(Image.id.notin_(existing_ids))
         
-        explore_images = explore_query.order_by(
-            desc(Image.like_count + Image.views / 10)
+        # Join with likes to get count and order by popularity
+        explore_images = explore_query.outerjoin(
+            Like, Like.image_id == Image.id
+        ).group_by(Image.id).order_by(
+            desc(func.count(Like.image_id) + Image.views / 10)
         ).limit(explore_limit).all()
     
     # Combine and sort by created_at
