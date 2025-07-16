@@ -11,11 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 class ConnectionManager:
-    """Manages WebSocket connections for real-time notifications"""
+    """Manages WebSocket connections for real-time notifications and comments"""
     
     def __init__(self):
         # Dictionary mapping user_id to set of WebSocket connections
         self.active_connections: Dict[int, Set[WebSocket]] = {}
+        # Dictionary mapping room_id to set of user_ids in that room
+        self.rooms: Dict[str, Set[int]] = {}
     
     async def connect(self, websocket: WebSocket, user_id: int):
         """Accept WebSocket connection and add to active connections"""
@@ -69,6 +71,34 @@ class ConnectionManager:
     def is_user_online(self, user_id: int) -> bool:
         """Check if a specific user is online"""
         return user_id in self.active_connections
+    
+    async def join_room(self, room_id: str, user_id: int):
+        """Add user to a room"""
+        if room_id not in self.rooms:
+            self.rooms[room_id] = set()
+        
+        self.rooms[room_id].add(user_id)
+        logger.info(f"User {user_id} joined room {room_id}")
+    
+    async def leave_room(self, room_id: str, user_id: int):
+        """Remove user from a room"""
+        if room_id in self.rooms:
+            self.rooms[room_id].discard(user_id)
+            
+            # Remove room if empty
+            if not self.rooms[room_id]:
+                del self.rooms[room_id]
+            
+            logger.info(f"User {user_id} left room {room_id}")
+    
+    async def send_to_room(self, room_id: str, message: dict, exclude_user: Optional[int] = None):
+        """Send message to all users in a room"""
+        if room_id in self.rooms:
+            for user_id in self.rooms[room_id]:
+                if exclude_user and user_id == exclude_user:
+                    continue
+                
+                await self.send_personal_message(message, user_id)
 
 
 # Global connection manager instance

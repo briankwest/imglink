@@ -110,6 +110,24 @@ async def websocket_endpoint(
                         "type": "online_users",
                         "users": list(online_users)
                     })
+                
+                elif data.get("type") == "join_room":
+                    room_id = data.get("room_id")
+                    if room_id:
+                        await manager.join_room(room_id, user.id)
+                        await websocket.send_json({
+                            "type": "room_joined",
+                            "room_id": room_id
+                        })
+                
+                elif data.get("type") == "leave_room":
+                    room_id = data.get("room_id")
+                    if room_id:
+                        await manager.leave_room(room_id, user.id)
+                        await websocket.send_json({
+                            "type": "room_left",
+                            "room_id": room_id
+                        })
                     
             except WebSocketDisconnect:
                 break
@@ -146,3 +164,16 @@ async def broadcast_notification(notification: dict, exclude_user: Optional[int]
         exclude_user: Optional user ID to exclude from broadcast
     """
     await manager.broadcast(notification, exclude_user)
+
+
+async def send_comment_to_room(image_id: int, message: dict, exclude_user: Optional[int] = None):
+    """
+    Send a comment-related message to all users viewing a specific image
+    
+    Args:
+        image_id: The image ID to send the comment to
+        message: Dictionary containing comment data
+        exclude_user: Optional user ID to exclude from broadcast (usually the comment author)
+    """
+    room_id = f"image_{image_id}"
+    await manager.send_to_room(room_id, message, exclude_user)

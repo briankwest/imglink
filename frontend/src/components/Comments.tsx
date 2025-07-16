@@ -1,26 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { ChatBubbleLeftIcon, PencilIcon, TrashIcon, ArrowUturnLeftIcon } from '@heroicons/react/24/outline'
 import { useAuthStore } from '../store/authStore'
-import axios from 'axios'
-
-interface CommentAuthor {
-  id: number
-  username: string
-  avatar_url?: string
-}
-
-interface Comment {
-  id: number
-  content: string
-  image_id: number
-  author_id: number
-  parent_id?: number
-  created_at: string
-  updated_at: string
-  author: CommentAuthor
-  replies: Comment[]
-}
+import { useComments, Comment, CommentAuthor } from '../hooks/useComments'
 
 interface CommentForm {
   content: string
@@ -32,22 +14,22 @@ interface CommentsProps {
 
 interface CommentItemProps {
   comment: Comment
-  imageId: number
-  onReply: (commentId: number) => void
-  onEdit: (commentId: number, content: string) => void
-  onDelete: (commentId: number) => void
+  editComment: (commentId: number, content: string) => Promise<Comment>
+  deleteComment: (commentId: number) => Promise<void>
+  submitComment: (content: string, parentId?: number) => Promise<Comment>
   replyingTo?: number
+  onReply: (commentId: number) => void
   onCancelReply?: () => void
 }
 
-function CommentItem({ comment, imageId, onReply, onEdit, onDelete, replyingTo, onCancelReply }: CommentItemProps) {
+function CommentItem({ comment, editComment, deleteComment, submitComment, replyingTo, onReply, onCancelReply }: CommentItemProps) {
   const { user, isAuthenticated } = useAuthStore()
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(comment.content)
   const [replyContent, setReplyContent] = useState('')
   const [submittingReply, setSubmittingReply] = useState(false)
 
-  const isAuthor = user && comment.author_id === user.id
+  const isAuthor = user && comment.user_id === user.id
   const isReplying = replyingTo === comment.id
 
   const formatDate = (dateString: string) => {
@@ -62,11 +44,10 @@ function CommentItem({ comment, imageId, onReply, onEdit, onDelete, replyingTo, 
 
   const handleEdit = async () => {
     try {
-      await axios.put(`/api/v1/images/comments/${comment.id}`, { content: editContent })
-      onEdit(comment.id, editContent)
+      await editComment(comment.id, editContent)
       setIsEditing(false)
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to update comment')
+      alert(err.message || 'Failed to update comment')
     }
   }
 
@@ -75,18 +56,23 @@ function CommentItem({ comment, imageId, onReply, onEdit, onDelete, replyingTo, 
 
     setSubmittingReply(true)
     try {
-      await axios.post(`/api/v1/images/${imageId}/comments`, {
-        content: replyContent,
-        parent_id: comment.id
-      })
+      await submitComment(replyContent, comment.id)
       setReplyContent('')
       onCancelReply?.()
-      // Trigger refresh of comments
-      window.location.reload()
     } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to post reply')
+      alert(err.message || 'Failed to post reply')
     } finally {
       setSubmittingReply(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this comment?')) return
+
+    try {
+      await deleteComment(comment.id)
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete comment')
     }
   }
 
@@ -117,7 +103,7 @@ function CommentItem({ comment, imageId, onReply, onEdit, onDelete, replyingTo, 
                     <PencilIcon className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => onDelete(comment.id)}
+                    onClick={handleDelete}
                     className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
                   >
                     <TrashIcon className="h-4 w-4" />
@@ -203,11 +189,11 @@ function CommentItem({ comment, imageId, onReply, onEdit, onDelete, replyingTo, 
                 <CommentItem
                   key={reply.id}
                   comment={reply}
-                  imageId={imageId}
-                  onReply={onReply}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
+                  editComment={editComment}
+                  deleteComment={deleteComment}
+                  submitComment={submitComment}
                   replyingTo={replyingTo}
+                  onReply={onReply}
                   onCancelReply={onCancelReply}
                 />
               ))}
@@ -221,10 +207,8 @@ function CommentItem({ comment, imageId, onReply, onEdit, onDelete, replyingTo, 
 
 export default function Comments({ imageId }: CommentsProps) {
   const { isAuthenticated } = useAuthStore()
-  const [comments, setComments] = useState<Comment[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [replyingTo, setReplyingTo] = useState<number | undefined>()
+  const { comments, loading, error, submitComment, editComment, deleteComment } = useComments(imageId)
 
   const {
     register,
@@ -233,51 +217,12 @@ export default function Comments({ imageId }: CommentsProps) {
     formState: { isSubmitting },
   } = useForm<CommentForm>()
 
-  useEffect(() => {
-    fetchComments()
-  }, [imageId])
-
-  const fetchComments = async () => {
-    try {
-      const response = await axios.get(`/api/v1/images/${imageId}/comments`)
-      setComments(response.data)
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load comments')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   const onSubmit = async (data: CommentForm) => {
     try {
-      await axios.post(`/api/v1/images/${imageId}/comments`, {
-        content: data.content,
-      })
+      await submitComment(data.content)
       reset()
-      fetchComments()
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to post comment')
-    }
-  }
-
-  const handleEdit = (commentId: number, newContent: string) => {
-    setComments(prev => 
-      prev.map(comment => 
-        comment.id === commentId 
-          ? { ...comment, content: newContent, updated_at: new Date().toISOString() }
-          : comment
-      )
-    )
-  }
-
-  const handleDelete = async (commentId: number) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return
-
-    try {
-      await axios.delete(`/api/v1/images/comments/${commentId}`)
-      fetchComments()
-    } catch (err: any) {
-      alert(err.response?.data?.detail || 'Failed to delete comment')
+      alert(err.message || 'Failed to post comment')
     }
   }
 
@@ -338,11 +283,11 @@ export default function Comments({ imageId }: CommentsProps) {
             <CommentItem
               key={comment.id}
               comment={comment}
-              imageId={imageId}
-              onReply={setReplyingTo}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              editComment={editComment}
+              deleteComment={deleteComment}
+              submitComment={submitComment}
               replyingTo={replyingTo}
+              onReply={setReplyingTo}
               onCancelReply={() => setReplyingTo(undefined)}
             />
           ))

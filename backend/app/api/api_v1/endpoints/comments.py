@@ -1,6 +1,8 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import asyncio
+import threading
 
 from app.api.deps import get_current_active_user, get_db, get_current_user_optional
 from app.models.user import User
@@ -8,8 +10,40 @@ from app.models.image import Image, ImagePrivacy
 from app.models.comment import Comment
 from app.schemas.comment import Comment as CommentSchema, CommentCreate, CommentUpdate
 from app.services.notification_service import NotificationService
+from app.api.api_v1.endpoints.websocket import send_comment_to_room
 
 router = APIRouter()
+
+
+def serialize_comment_for_websocket(comment: Comment) -> dict:
+    """Serialize comment for WebSocket transmission"""
+    comment_data = CommentSchema.from_orm(comment).model_dump()
+    # Convert datetime objects to ISO format strings
+    if 'created_at' in comment_data:
+        comment_data['created_at'] = comment_data['created_at'].isoformat()
+    if 'updated_at' in comment_data:
+        comment_data['updated_at'] = comment_data['updated_at'].isoformat()
+    return comment_data
+
+
+def broadcast_comment_event(image_id: int, message: dict, exclude_user: int):
+    """Helper function to broadcast comment events in a separate thread"""
+    def run_broadcast():
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(send_comment_to_room(
+                image_id=image_id,
+                message=message,
+                exclude_user=exclude_user
+            ))
+        finally:
+            loop.close()
+    
+    # Run in a separate thread
+    thread = threading.Thread(target=run_broadcast)
+    thread.daemon = True
+    thread.start()
 
 
 @router.get("/{image_id}/comments", response_model=List[CommentSchema])
@@ -101,6 +135,16 @@ def create_comment(
                 comment_preview=comment.content
             )
     
+    # Broadcast comment to WebSocket room
+    broadcast_comment_event(
+        image_id=image.id,
+        message={
+            "type": "new_comment",
+            "comment": serialize_comment_for_websocket(comment)
+        },
+        exclude_user=current_user.id
+    )
+    
     return comment
 
 
@@ -123,6 +167,16 @@ def update_comment(
     db.commit()
     db.refresh(comment)
     
+    # Broadcast comment update to WebSocket room
+    broadcast_comment_event(
+        image_id=comment.image_id,
+        message={
+            "type": "edit_comment",
+            "comment": serialize_comment_for_websocket(comment)
+        },
+        exclude_user=current_user.id
+    )
+    
     return comment
 
 
@@ -140,7 +194,21 @@ def delete_comment(
     if comment.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
+    # Get image_id before deletion
+    image_id = comment.image_id
+    comment_id = comment.id
+    
     db.delete(comment)
     db.commit()
+    
+    # Broadcast comment deletion to WebSocket room
+    broadcast_comment_event(
+        image_id=image_id,
+        message={
+            "type": "delete_comment",
+            "comment_id": comment_id
+        },
+        exclude_user=current_user.id
+    )
     
     return {"message": "Comment deleted successfully"}

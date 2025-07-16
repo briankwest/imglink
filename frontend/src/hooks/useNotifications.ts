@@ -160,6 +160,13 @@ export function useNotifications(): UseNotificationsReturn {
               console.log('Online users:', data.users)
               break
               
+            case 'new_comment':
+            case 'edit_comment':
+            case 'delete_comment':
+              // Comment-related messages are handled by useComments hook
+              // Just ignore them here to prevent "Unknown message type" logs
+              break
+              
             default:
               console.log('Unknown message type:', data.type)
           }
