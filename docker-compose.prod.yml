@@ -1,0 +1,167 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: imglink-db-prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-imglink}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-imglink_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-imglink}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    networks:
+      - imglink-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-imglink}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    container_name: imglink-redis-prod
+    volumes:
+      - redis_data:/data
+    networks:
+      - imglink-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  minio:
+    image: minio/minio:latest
+    container_name: imglink-minio-prod
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_secure_password}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - imglink-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: imglink-backend-prod
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-imglink}:${POSTGRES_PASSWORD:-imglink_secure_password}@db:5432/${POSTGRES_DB:-imglink}
+      - REDIS_URL=redis://redis:6379/0
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minio_secure_password}
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - BACKEND_URL=${BACKEND_URL:-http://localhost:8000}
+      - ENVIRONMENT=production
+    volumes:
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    networks:
+      - imglink-network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: imglink-frontend-prod
+    ports:
+      - "${PORT:-80}:80"
+    networks:
+      - imglink-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  # Optional: Reverse proxy for SSL termination
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: imglink-proxy
+    ports:
+      - "443:443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - imglink-network
+    depends_on:
+      - frontend
+    restart: unless-stopped
+    profiles:
+      - ssl
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
+
+networks:
+  imglink-network:
+    driver: bridge

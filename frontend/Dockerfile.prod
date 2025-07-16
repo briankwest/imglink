@@ -1,0 +1,53 @@
+# Multi-stage build for production
+FROM node:18-alpine as builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies for build
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production stage with nginx
+FROM nginx:alpine
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+# Copy built assets
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Create non-root user
+RUN addgroup -g 1001 -S imglink && \
+    adduser -S imglink -u 1001
+
+# Set proper permissions
+RUN chown -R imglink:imglink /usr/share/nginx/html \
+    && chown -R imglink:imglink /var/cache/nginx \
+    && chown -R imglink:imglink /var/log/nginx \
+    && chown -R imglink:imglink /etc/nginx/conf.d \
+    && touch /var/run/nginx.pid \
+    && chown -R imglink:imglink /var/run/nginx.pid
+
+# Switch to non-root user
+USER imglink
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:80/ || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
