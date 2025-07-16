@@ -137,6 +137,8 @@ export const useAuthStore = create<AuthState>()(
           const response = await axios.get(`${API_URL}/api/v1/users/me`)
           set({ user: response.data })
         } catch (error) {
+          // If fetching current user fails, the token might be invalid
+          // Don't logout here - let the interceptor handle it
           throw error
         }
       },
@@ -196,6 +198,26 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      version: 1,
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+        user: state.user,
+      }),
+      onRehydrateStorage: () => (state) => {
+        // If we have tokens but isAuthenticated is false, fix it
+        if (state && state.accessToken && state.refreshToken && !state.isAuthenticated) {
+          state.isAuthenticated = true
+        }
+        // Set axios header if we have a token
+        if (state?.accessToken) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${state.accessToken}`
+        }
+      },
+      migrate: (persistedState: any, version: number) => {
+        return persistedState
+      },
     }
   )
 )
@@ -214,7 +236,13 @@ axios.interceptors.response.use(
         return axios(originalRequest)
       } catch (refreshError) {
         useAuthStore.getState().logout()
-        window.location.href = '/login'
+        
+        // Only redirect to login if not already on login/register pages
+        const currentPath = window.location.pathname
+        if (!currentPath.includes('/login') && !currentPath.includes('/register') && !currentPath.includes('/auth/')) {
+          window.location.href = '/login'
+        }
+        
         return Promise.reject(refreshError)
       }
     }

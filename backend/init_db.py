@@ -98,7 +98,7 @@ def run_migrations() -> bool:
                 print("  Fresh database detected, applying initial schema...")
                 # Apply the initial schema first
                 result = subprocess.run(
-                    ["alembic", "upgrade", "001_initial_schema"],
+                    ["alembic", "upgrade", "001_baseline_schema"],
                     capture_output=True,
                     text=True
                 )
@@ -122,7 +122,7 @@ def run_migrations() -> bool:
                 capture_output=True,
                 text=True
             )
-            heads = [line.split()[0] for line in heads_result.stdout.strip().split('\n') if line and line.split()[0] != '001_initial_schema']
+            heads = [line.split()[0] for line in heads_result.stdout.strip().split('\n') if line and line.split()[0] != '001_baseline_schema']
             
             for head in heads:
                 print(f"  Applying migration: {head}")
