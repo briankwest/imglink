@@ -168,6 +168,7 @@ def update_comment(
     db.refresh(comment)
     
     # Broadcast comment update to WebSocket room
+    print(f"Broadcasting edit comment: user_id={current_user.id}, comment_id={comment.id}, comment_user_id={comment.user_id}")
     broadcast_comment_event(
         image_id=comment.image_id,
         message={

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuthStore } from '../store/authStore'
 import axios from 'axios'
 
@@ -26,6 +26,11 @@ export const useComments = (imageId: number) => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [ws, setWs] = useState<WebSocket | null>(null)
+  
+  // Use refs to store current functions to avoid WebSocket recreation
+  const addCommentRef = useRef<(comment: Comment) => void>()
+  const updateCommentRef = useRef<(comment: Comment) => void>()
+  const removeCommentRef = useRef<(commentId: number) => void>()
 
   // Fetch comments from API
   const fetchComments = useCallback(async () => {
@@ -79,6 +84,9 @@ export const useComments = (imageId: number) => {
     }
   }, [])
 
+  // Update ref
+  addCommentRef.current = addComment
+
   // Update existing comment in state
   const updateComment = useCallback((updatedComment: Comment) => {
     const updateCommentInTree = (comments: Comment[]): Comment[] => {
@@ -97,6 +105,9 @@ export const useComments = (imageId: number) => {
     setComments(prev => updateCommentInTree(prev))
   }, [])
 
+  // Update ref
+  updateCommentRef.current = updateComment
+
   // Remove comment from state
   const removeComment = useCallback((commentId: number) => {
     const removeCommentFromTree = (comments: Comment[]): Comment[] => {
@@ -112,6 +123,9 @@ export const useComments = (imageId: number) => {
     }
     setComments(prev => removeCommentFromTree(prev))
   }, [])
+
+  // Update ref
+  removeCommentRef.current = removeComment
 
   // WebSocket connection management
   useEffect(() => {
@@ -141,18 +155,28 @@ export const useComments = (imageId: number) => {
           if (data.type === 'new_comment') {
             // Only add if this comment is not from the current user (to prevent duplicates)
             if (user && data.comment.user_id !== user.id) {
-              addComment(data.comment)
+              addCommentRef.current?.(data.comment)
             }
           } else if (data.type === 'edit_comment') {
+            console.log('Edit message received:', {
+              messageUserId: data.comment.user_id,
+              currentUserId: user?.id,
+              currentUsername: user?.username,
+              shouldProcess: user && data.comment.user_id !== user.id,
+              comment: data.comment
+            })
             // Only update if this comment is not from the current user (to prevent duplicates)
             if (user && data.comment.user_id !== user.id) {
-              updateComment(data.comment)
+              console.log('Processing edit update')
+              updateCommentRef.current?.(data.comment)
+            } else {
+              console.log('Skipping edit update - same user or no user')
             }
           } else if (data.type === 'delete_comment') {
             // For deletes, we only get the comment_id, so we need to check if we should process it
             // Since we can't check the author_id from comment_id alone, we'll process all delete events
             // The backend should already exclude the author from receiving delete events
-            removeComment(data.comment_id)
+            removeCommentRef.current?.(data.comment_id)
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error)
@@ -185,7 +209,7 @@ export const useComments = (imageId: number) => {
         ws.close()
       }
     }
-  }, [isAuthenticated, accessToken, imageId, addComment, updateComment, removeComment])
+  }, [isAuthenticated, accessToken, imageId, user])
 
   // Fetch comments on mount
   useEffect(() => {

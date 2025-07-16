@@ -94,10 +94,13 @@ class ConnectionManager:
     async def send_to_room(self, room_id: str, message: dict, exclude_user: Optional[int] = None):
         """Send message to all users in a room"""
         if room_id in self.rooms:
+            print(f"Room {room_id} users: {self.rooms[room_id]}, excluding: {exclude_user}")
             for user_id in self.rooms[room_id]:
                 if exclude_user and user_id == exclude_user:
+                    print(f"Excluding user {user_id} from message")
                     continue
                 
+                print(f"Sending message to user {user_id}: {message.get('type')}")
                 await self.send_personal_message(message, user_id)
 
 
