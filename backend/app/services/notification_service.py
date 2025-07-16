@@ -153,6 +153,36 @@ class NotificationService:
         )
     
     @staticmethod
+    def notify_reply(
+        db: Session,
+        *,
+        parent_comment_author_id: int,
+        replier: User,
+        image_id: int,
+        image_title: str,
+        reply_preview: str
+    ) -> Optional[Notification]:
+        """Send notification for comment reply"""
+        # Don't notify if user is replying to their own comment
+        if parent_comment_author_id == replier.id:
+            return None
+        
+        return NotificationService.create_notification(
+            db,
+            user_id=parent_comment_author_id,
+            type=NotificationType.COMMENT,
+            title=f"{replier.username} replied to your comment",
+            message=f'"{reply_preview[:50]}{"..." if len(reply_preview) > 50 else ""}"',
+            related_user_id=replier.id,
+            related_image_id=image_id,
+            data={
+                "image_title": image_title,
+                "reply_preview": reply_preview,
+                "is_reply": True
+            }
+        )
+    
+    @staticmethod
     def notify_follow(
         db: Session,
         *,

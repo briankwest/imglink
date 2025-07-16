@@ -83,11 +83,30 @@ export function useNotifications(): UseNotificationsReturn {
               
               setNotifications(prev => [newNotification, ...prev])
               
+              // Play notification sound using a simple beep
+              try {
+                // Create a simple notification sound using Web Audio API
+                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+                const oscillator = audioContext.createOscillator()
+                const gainNode = audioContext.createGain()
+                
+                oscillator.connect(gainNode)
+                gainNode.connect(audioContext.destination)
+                
+                oscillator.frequency.value = 800 // Frequency in Hz
+                gainNode.gain.value = 0.1 // Volume (10%)
+                
+                oscillator.start()
+                oscillator.stop(audioContext.currentTime + 0.1) // Play for 100ms
+              } catch (error) {
+                console.log('Could not play notification sound:', error)
+              }
+              
               // Show browser notification if permitted
               if (Notification.permission === 'granted') {
                 new Notification(newNotification.title, {
                   body: newNotification.message,
-                  icon: '/favicon.ico'
+                  icon: '/favicon.png'
                 })
               }
               break

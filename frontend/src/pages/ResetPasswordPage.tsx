@@ -40,7 +40,7 @@ export default function ResetPasswordPage() {
     setError('')
     
     try {
-      await axios.post('/api/v1/auth/reset-password', {
+      await axios.post('http://localhost:8000/api/v1/auth/reset-password', {
         token,
         new_password: data.new_password
       })

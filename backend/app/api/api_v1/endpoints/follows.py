@@ -11,6 +11,7 @@ from app.api import deps
 from app.models.user import User
 from app.models.follow import Follow
 from app.models.notification import Notification, NotificationType
+from app.services.notification_service import NotificationService
 from app.schemas.follow import UserFollowInfo, FollowStats
 from app.schemas.user import User as UserSchema
 from app.schemas.image import Image as ImageSchema
@@ -64,22 +65,15 @@ def follow_user(
     )
     db.add(follow)
     
-    # Create notification for the followed user
-    notification = Notification(
-        user_id=user_id,
-        type=NotificationType.FOLLOW,
-        title="New Follower",
-        message=f"{current_user.username} started following you",
-        related_user_id=current_user.id,
-        data=json.dumps({
-            "follower_id": current_user.id,
-            "follower_username": current_user.username,
-            "follower_avatar": current_user.avatar_url
-        })
-    )
-    db.add(notification)
-    
+    # Commit the follow relationship first
     db.commit()
+    
+    # Send notification using NotificationService for real-time delivery
+    NotificationService.notify_follow(
+        db,
+        followed_user_id=user_id,
+        follower=current_user
+    )
     
     return {"message": "Successfully followed user"}
 

@@ -165,7 +165,7 @@ const TagInput: React.FC<TagInputProps> = ({
                   key={suggestion.id}
                   onClick={() => handleAddTag(suggestion.name)}
                   onMouseEnter={() => setSelectedIndex(index)}
-                  className={`w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
+                  className={`w-full px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between ${
                     index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
                   }`}
                 >
@@ -184,7 +184,7 @@ const TagInput: React.FC<TagInputProps> = ({
                 <button
                   onClick={() => handleAddTag(input.trim())}
                   onMouseEnter={() => setSelectedIndex(suggestions.length)}
-                  className={`w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700 ${
+                  className={`w-full px-3 py-2 text-left text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700 ${
                     selectedIndex === suggestions.length ? 'bg-gray-100 dark:bg-gray-700' : ''
                   }`}
                 >

@@ -24,7 +24,7 @@ export default function VerifyEmailPage() {
 
   const verifyEmail = async (token: string) => {
     try {
-      await axios.post('/api/v1/auth/verify-email', { token })
+      await axios.post('http://localhost:8000/api/v1/auth/verify-email', { token })
       setStatus('success')
       setMessage('Your email has been successfully verified! You can now sign in to your account.')
     } catch (error: any) {
@@ -44,7 +44,7 @@ export default function VerifyEmailPage() {
 
     setResending(true)
     try {
-      await axios.post('/api/v1/auth/resend-verification', { email: resendEmail })
+      await axios.post('http://localhost:8000/api/v1/auth/resend-verification', { email: resendEmail })
       setMessage('Verification email sent! Please check your inbox.')
     } catch (error: any) {
       setMessage(error.response?.data?.detail || 'Failed to send verification email.')

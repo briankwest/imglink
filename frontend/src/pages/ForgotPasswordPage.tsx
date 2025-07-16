@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
     setError('')
     
     try {
-      await axios.post('/api/v1/auth/forgot-password', data)
+      await axios.post('http://localhost:8000/api/v1/auth/forgot-password', data)
       setSubmitted(true)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to send reset email. Please try again.')

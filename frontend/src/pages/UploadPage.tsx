@@ -81,7 +81,7 @@ export default function UploadPage() {
         formData.append('title', file.name.split('.')[0])
         formData.append('privacy', defaultPrivacy)
 
-        const response = await axios.post('/api/v1/images/', formData, {
+        const response = await axios.post('http://localhost:8000/api/v1/images/', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },

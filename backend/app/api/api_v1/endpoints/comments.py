@@ -76,17 +76,30 @@ def create_comment(
     db.commit()
     db.refresh(comment)
     
-    # Send notification to image owner if it's not the commenter
-    if image.owner_id != current_user.id and not comment_in.parent_id:
-        # Only notify for top-level comments, not replies
-        NotificationService.notify_comment(
-            db,
-            image_owner_id=image.owner_id,
-            commenter=current_user,
-            image_id=image.id,
-            image_title=image.title or "Untitled",
-            comment_preview=comment.content
-        )
+    # Send notifications
+    if comment_in.parent_id:
+        # This is a reply - notify the parent comment author
+        parent_comment = db.query(Comment).filter(Comment.id == comment_in.parent_id).first()
+        if parent_comment and parent_comment.author_id != current_user.id:
+            NotificationService.notify_reply(
+                db,
+                parent_comment_author_id=parent_comment.author_id,
+                replier=current_user,
+                image_id=image.id,
+                image_title=image.title or "Untitled",
+                reply_preview=comment.content[:100]  # First 100 chars
+            )
+    else:
+        # This is a top-level comment - notify the image owner
+        if image.owner_id != current_user.id:
+            NotificationService.notify_comment(
+                db,
+                image_owner_id=image.owner_id,
+                commenter=current_user,
+                image_id=image.id,
+                image_title=image.title or "Untitled",
+                comment_preview=comment.content
+            )
     
     return comment
 

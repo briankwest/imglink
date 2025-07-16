@@ -119,7 +119,40 @@ def get_all_images(
     
     images = query.order_by(Image.created_at.desc()).offset(skip).limit(limit).all()
     
-    return images
+    # Build response data with proper tag serialization
+    result = []
+    for image in images:
+        # Convert ImageTag objects to tag names
+        tag_names = [tag.tag.name for tag in image.tags] if hasattr(image, 'tags') else []
+        
+        # Create image dict with proper tags
+        image_dict = {
+            "id": image.id,
+            "title": image.title,
+            "description": image.description,
+            "filename": image.filename,
+            "original_filename": image.original_filename,
+            "file_size": image.file_size,
+            "file_type": image.file_type,
+            "width": image.width,
+            "height": image.height,
+            "url": image.url,
+            "thumbnail_url": image.thumbnail_url,
+            "medium_url": image.medium_url,
+            "large_url": image.large_url,
+            "delete_hash": image.delete_hash,
+            "privacy": image.privacy,
+            "views": image.views,
+            "is_nsfw": image.is_nsfw,
+            "owner_id": image.owner_id,
+            "created_at": image.created_at,
+            "updated_at": image.updated_at,
+            "like_count": image.like_count,
+            "tags": tag_names
+        }
+        result.append(image_dict)
+    
+    return result
 
 
 @router.delete("/images/{image_id}")
