@@ -1,12 +1,13 @@
-from typing import Any, List
+from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_active_user, get_db
+from app.api.deps import get_current_active_user, get_db, get_current_user_optional
 from app.models.user import User
 from app.models.image import Image, ImagePrivacy
 from app.schemas.user import User as UserSchema, UserUpdate
 from app.schemas.image import Image as ImageSchema
+from app.schemas.follow import UserFollowInfo
 from app.core.security import get_password_hash
 
 router = APIRouter()
@@ -83,4 +84,68 @@ def read_user_public_images(
         Image.privacy == ImagePrivacy.PUBLIC
     ).order_by(Image.created_at.desc()).offset(skip).limit(limit).all()
     
-    return images
+    # Build response data with proper tag serialization
+    result = []
+    for image in images:
+        # Convert ImageTag objects to tag names
+        tag_names = [tag.tag.name for tag in image.tags] if hasattr(image, 'tags') else []
+        
+        # Create image dict with proper tags
+        image_dict = {
+            "id": image.id,
+            "title": image.title,
+            "description": image.description,
+            "filename": image.filename,
+            "original_filename": image.original_filename,
+            "file_size": image.file_size,
+            "file_type": image.file_type,
+            "width": image.width,
+            "height": image.height,
+            "url": image.url,
+            "thumbnail_url": image.thumbnail_url,
+            "medium_url": image.medium_url,
+            "large_url": image.large_url,
+            "delete_hash": image.delete_hash,
+            "privacy": image.privacy,
+            "views": image.views,
+            "is_nsfw": image.is_nsfw,
+            "owner_id": image.owner_id,
+            "created_at": image.created_at,
+            "updated_at": image.updated_at,
+            "like_count": image.like_count,
+            "tags": tag_names
+        }
+        result.append(image_dict)
+    
+    return result
+
+
+@router.get("/{username}/profile", response_model=UserFollowInfo)
+def read_user_profile(
+    *,
+    db: Session = Depends(get_db),
+    username: str,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+) -> Any:
+    """Get user profile with follow information."""
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Create user follow info
+    user_info = UserFollowInfo(
+        id=user.id,
+        username=user.username,
+        full_name=user.full_name,
+        avatar_url=user.avatar_url,
+        bio=user.bio,
+        followers_count=user.followers_count,
+        following_count=user.following_count
+    )
+    
+    # Add follow status if authenticated
+    if current_user and current_user.id != user.id:
+        user_info.is_following = current_user.is_following(user)
+        user_info.is_followed_by = user.is_followed_by(current_user)
+    
+    return user_info

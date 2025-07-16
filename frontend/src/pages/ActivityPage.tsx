@@ -39,12 +39,18 @@ export default function ActivityPage() {
   useEffect(() => {
     setError('') // Clear any previous errors before fetching
     fetchRecentActivity()
-  }, [])
+  }, [isAuthenticated])
 
   const fetchRecentActivity = async () => {
     try {
-      // For now, just get recent public images as activity
-      const response = await axios.get('/api/v1/images/?limit=20')
+      let response;
+      if (isAuthenticated) {
+        // Get activity feed from followed users
+        response = await axios.get('http://localhost:8000/api/v1/users/activity/feed?limit=20')
+      } else {
+        // Get recent public images for non-authenticated users
+        response = await axios.get('http://localhost:8000/api/v1/images/?limit=20')
+      }
       setRecentImages(response.data)
       setError('') // Clear any previous errors on successful load
     } catch (err: any) {
@@ -91,9 +97,14 @@ export default function ActivityPage() {
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Recent Activity</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          {isAuthenticated ? 'Your Activity Feed' : 'Recent Activity'}
+        </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Discover the latest images and activity from the ImgLink community
+          {isAuthenticated 
+            ? 'Latest images from people you follow and your own uploads'
+            : 'Discover the latest images and activity from the ImgLink community'
+          }
         </p>
       </div>
 

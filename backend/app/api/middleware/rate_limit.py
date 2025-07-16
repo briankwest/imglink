@@ -54,7 +54,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         user = db.query(User).filter(User.username == username).first()
                         if user and user.is_active:
                             user_id = user.id
-                            user_tier = user.tier or "standard"
+                            user_tier = user.effective_tier
                         db.close()
                 except (JWTError, Exception):
                     # Invalid token, treat as anonymous

@@ -35,7 +35,7 @@ export default function DashboardPage() {
 
   const fetchUserImages = async () => {
     try {
-      const response = await axios.get('/api/v1/images/me')
+      const response = await axios.get('http://localhost:8000/api/v1/images/me')
       setImages(response.data)
       setError('') // Clear any previous errors on successful load
     } catch (err: any) {

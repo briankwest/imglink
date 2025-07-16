@@ -40,7 +40,7 @@ export default function AlbumsPage() {
 
   const fetchAlbums = async () => {
     try {
-      const response = await axios.get('/api/v1/albums/me')
+      const response = await axios.get('http://localhost:8000/api/v1/albums/me')
       setAlbums(response.data)
       setError('') // Clear any previous errors on successful load
     } catch (err: any) {

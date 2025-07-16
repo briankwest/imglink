@@ -48,11 +48,11 @@ export default function AlbumDetailPage() {
 
   const fetchAlbum = async () => {
     try {
-      const response = await axios.get(`/api/v1/albums/${id}`)
+      const response = await axios.get(`http://localhost:8000/api/v1/albums/${id}`)
       setAlbum(response.data)
 
       // Fetch owner info
-      const ownerResponse = await axios.get(`/api/v1/users/${response.data.owner_id}`)
+      const ownerResponse = await axios.get(`http://localhost:8000/api/v1/users/${response.data.owner_id}`)
       setOwner(ownerResponse.data)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load album')
@@ -77,11 +77,11 @@ export default function AlbumDetailPage() {
   const getPrivacyInfo = (privacy: string) => {
     switch (privacy) {
       case 'private':
-        return { icon: LockClosedIcon, text: 'Private', color: 'text-red-600' }
+        return { icon: LockClosedIcon, text: 'Private', color: 'text-red-600 dark:text-red-400' }
       case 'unlisted':
-        return { icon: EyeSlashIcon, text: 'Unlisted', color: 'text-yellow-600' }
+        return { icon: EyeSlashIcon, text: 'Unlisted', color: 'text-yellow-600 dark:text-yellow-400' }
       default:
-        return { icon: EyeIcon, text: 'Public', color: 'text-green-600' }
+        return { icon: EyeIcon, text: 'Public', color: 'text-green-600 dark:text-green-400' }
     }
   }
 
@@ -106,8 +106,8 @@ export default function AlbumDetailPage() {
   if (error || !album) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
-        <h3 className="text-lg font-medium text-gray-900">Album not found</h3>
-        <p className="mt-1 text-sm text-gray-500">{error || 'The album you\'re looking for doesn\'t exist.'}</p>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white">Album not found</h3>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{error || 'The album you\'re looking for doesn\'t exist.'}</p>
         <div className="mt-6">
           <Link
             to="/albums"
@@ -126,11 +126,11 @@ export default function AlbumDetailPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       {/* Album Header */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-2">
-              <h1 className="text-3xl font-bold text-gray-900">{album.title}</h1>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{album.title}</h1>
               <div className={`flex items-center space-x-1 ${privacyInfo.color}`}>
                 <PrivacyIcon className="h-5 w-5" />
                 <span className="text-sm font-medium">{privacyInfo.text}</span>
@@ -138,12 +138,12 @@ export default function AlbumDetailPage() {
             </div>
             
             {album.description && (
-              <p className="text-gray-600 mb-4">{album.description}</p>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">{album.description}</p>
             )}
 
             {/* Owner Info */}
             {owner && (
-              <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <img
                   src={owner.avatar_url || `https://ui-avatars.com/api/?name=${owner.username}&background=6366f1&color=fff`}
                   alt={owner.username}
@@ -152,11 +152,11 @@ export default function AlbumDetailPage() {
                 <div>
                   <Link
                     to={`/user/${owner.username}`}
-                    className="font-medium text-gray-900 hover:text-indigo-600"
+                    className="font-medium text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400"
                   >
                     {owner.username}
                   </Link>
-                  <p className="text-sm text-gray-500">Album creator</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Album creator</p>
                 </div>
               </div>
             )}
@@ -164,22 +164,22 @@ export default function AlbumDetailPage() {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{album.image_count}</div>
-                <div className="text-sm text-gray-500">Images</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{album.image_count}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Images</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{album.views}</div>
-                <div className="text-sm text-gray-500">Views</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{album.views}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Views</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                   {album.images.reduce((total, img) => total + img.like_count, 0)}
                 </div>
-                <div className="text-sm text-gray-500">Total Likes</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Total Likes</div>
               </div>
             </div>
 
-            <div className="flex items-center space-x-1 text-sm text-gray-500">
+            <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
               <CalendarIcon className="h-4 w-4" />
               <span>Created {formatDate(album.created_at)}</span>
             </div>
@@ -190,7 +190,7 @@ export default function AlbumDetailPage() {
             <div className="flex space-x-2">
               <Link
                 to={`/albums/${album.id}/edit`}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800"
               >
                 <PencilIcon className="h-4 w-4 mr-1" />
                 Edit
@@ -209,18 +209,18 @@ export default function AlbumDetailPage() {
 
       {/* Images Grid */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
           Images in this album
         </h2>
 
         {album.images.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <div className="text-center text-gray-400">
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="text-center text-gray-400 dark:text-gray-500">
               <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No images in this album</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No images in this album</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 This album is empty.
               </p>
               {isOwner && (
@@ -241,7 +241,7 @@ export default function AlbumDetailPage() {
               <Link
                 key={image.id}
                 to={`/image/${image.id}`}
-                className="group relative bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200"
+                className="group relative bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200"
               >
                 <LazyImage
                   src={image.url}
@@ -252,10 +252,10 @@ export default function AlbumDetailPage() {
                 />
                 {image.title && (
                   <div className="p-4">
-                    <h3 className="text-sm font-medium text-gray-900 truncate">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {image.title}
                     </h3>
-                    <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                    <div className="flex justify-between items-center mt-2 text-xs text-gray-500 dark:text-gray-400">
                       <span>{image.views} views</span>
                       <span>{image.like_count} likes</span>
                     </div>

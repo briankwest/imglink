@@ -3,6 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import { PhotoIcon, CalendarIcon } from '@heroicons/react/24/outline'
 import axios from 'axios'
 import LazyImage from '../components/LazyImage'
+import FollowButton from '../components/FollowButton'
+import FollowStats from '../components/FollowStats'
+import { apiService } from '../services/api'
 
 interface User {
   id: number
@@ -12,6 +15,10 @@ interface User {
   avatar_url?: string
   bio?: string
   created_at: string
+  followers_count: number
+  following_count: number
+  is_following: boolean
+  is_followed_by: boolean
 }
 
 interface Image {
@@ -31,6 +38,16 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const handleFollowChange = (isFollowing: boolean) => {
+    if (user) {
+      setUser({
+        ...user,
+        is_following: isFollowing,
+        followers_count: user.followers_count + (isFollowing ? 1 : -1)
+      })
+    }
+  }
+
   useEffect(() => {
     if (username) {
       setError('') // Clear any previous errors before fetching
@@ -40,12 +57,12 @@ export default function ProfilePage() {
 
   const fetchUserProfile = async () => {
     try {
-      // Fetch user info
-      const userResponse = await axios.get(`/api/v1/users/username/${username}`)
-      setUser(userResponse.data)
+      // Fetch user info with follow status
+      const userResponse = await apiService.get(`/api/v1/users/${username}/profile`)
+      setUser(userResponse)
 
       // Fetch user's public images
-      const imagesResponse = await axios.get(`/api/v1/users/username/${username}/images`)
+      const imagesResponse = await axios.get(`http://localhost:8000/api/v1/users/username/${username}/images`)
       setImages(imagesResponse.data)
       setError('') // Clear any previous errors on successful load
     } catch (err: any) {
@@ -108,8 +125,25 @@ export default function ProfilePage() {
             className="h-24 w-24 rounded-full"
           />
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{user.full_name || user.username}</h1>
-            <p className="text-gray-600 dark:text-gray-400">@{user.username}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{user.full_name || user.username}</h1>
+                <p className="text-gray-600 dark:text-gray-400">@{user.username}</p>
+              </div>
+              <FollowButton
+                userId={user.id}
+                username={user.username}
+                initialIsFollowing={user.is_following}
+                onFollowChange={handleFollowChange}
+              />
+            </div>
+            
+            <FollowStats
+              username={user.username}
+              followersCount={user.followers_count}
+              followingCount={user.following_count}
+              className="mt-4"
+            />
             {user.bio && (
               <p className="mt-2 text-gray-700 dark:text-gray-300">{user.bio}</p>
             )}

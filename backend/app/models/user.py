@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, func, select
+from sqlalchemy.orm import relationship, column_property
+from sqlalchemy.ext.hybrid import hybrid_property
 from datetime import datetime, timedelta
 import secrets
 
@@ -43,6 +44,10 @@ class User(Base):
     likes = relationship("Like", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", foreign_keys="Notification.user_id", back_populates="user", cascade="all, delete-orphan")
     
+    # Following relationships - these are populated by Follow model's backref
+    # following_relationships: List of Follow objects where this user is the follower
+    # follower_relationships: List of Follow objects where this user is being followed
+    
     def generate_email_verification_token(self):
         """Generate a new email verification token"""
         self.email_verification_token = secrets.token_urlsafe(32)
@@ -83,3 +88,30 @@ class User(Base):
         """Clear password reset token after successful reset"""
         self.password_reset_token = None
         self.password_reset_sent_at = None
+    
+    @property
+    def followers_count(self) -> int:
+        """Get count of followers."""
+        return len(self.follower_relationships) if self.follower_relationships else 0
+    
+    @property
+    def following_count(self) -> int:
+        """Get count of users this user is following."""
+        return len(self.following_relationships) if self.following_relationships else 0
+    
+    def is_following(self, user) -> bool:
+        """Check if this user is following another user."""
+        if not self.following_relationships:
+            return False
+        return any(follow.following_id == user.id for follow in self.following_relationships)
+    
+    def is_followed_by(self, user) -> bool:
+        """Check if this user is followed by another user."""
+        if not self.follower_relationships:
+            return False
+        return any(follow.follower_id == user.id for follow in self.follower_relationships)
+    
+    @property
+    def effective_tier(self) -> str:
+        """Get the effective tier, defaulting to 'standard' if None."""
+        return self.tier or "standard"

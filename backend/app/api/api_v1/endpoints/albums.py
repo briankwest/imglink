@@ -49,7 +49,39 @@ def create_album(
     db.refresh(db_album)
     
     # Build response without modifying the model
-    images = [ai.image for ai in db_album.images]
+    images = []
+    for ai in db_album.images:
+        image = ai.image
+        # Convert ImageTag objects to tag names
+        tag_names = [tag.tag.name for tag in image.tags] if hasattr(image, 'tags') else []
+        
+        # Create image dict with proper tags
+        image_dict = {
+            "id": image.id,
+            "title": image.title,
+            "description": image.description,
+            "filename": image.filename,
+            "original_filename": image.original_filename,
+            "file_size": image.file_size,
+            "file_type": image.file_type,
+            "width": image.width,
+            "height": image.height,
+            "url": image.url,
+            "thumbnail_url": image.thumbnail_url,
+            "medium_url": image.medium_url,
+            "large_url": image.large_url,
+            "delete_hash": image.delete_hash,
+            "privacy": image.privacy,
+            "views": image.views,
+            "is_nsfw": image.is_nsfw,
+            "owner_id": image.owner_id,
+            "created_at": image.created_at,
+            "updated_at": image.updated_at,
+            "like_count": image.like_count,
+            "tags": tag_names
+        }
+        images.append(image_dict)
+    
     album_response = {
         "id": db_album.id,
         "title": db_album.title,
@@ -82,7 +114,40 @@ def read_albums(
     # Build response data without modifying the model objects
     album_responses = []
     for album in albums:
-        preview_images = [ai.image for ai in album.images[:4]]  # Preview images
+        # Process preview images with proper tag serialization
+        preview_images = []
+        for ai in album.images[:4]:  # Preview images
+            image = ai.image
+            # Convert ImageTag objects to tag names
+            tag_names = [tag.tag.name for tag in image.tags] if hasattr(image, 'tags') else []
+            
+            # Create image dict with proper tags
+            image_dict = {
+                "id": image.id,
+                "title": image.title,
+                "description": image.description,
+                "filename": image.filename,
+                "original_filename": image.original_filename,
+                "file_size": image.file_size,
+                "file_type": image.file_type,
+                "width": image.width,
+                "height": image.height,
+                "url": image.url,
+                "thumbnail_url": image.thumbnail_url,
+                "medium_url": image.medium_url,
+                "large_url": image.large_url,
+                "delete_hash": image.delete_hash,
+                "privacy": image.privacy,
+                "views": image.views,
+                "is_nsfw": image.is_nsfw,
+                "owner_id": image.owner_id,
+                "created_at": image.created_at,
+                "updated_at": image.updated_at,
+                "like_count": image.like_count,
+                "tags": tag_names
+            }
+            preview_images.append(image_dict)
+        
         album_data = {
             "id": album.id,
             "title": album.title,
@@ -117,7 +182,40 @@ def read_user_albums(
     # Build response data without modifying the model objects
     album_responses = []
     for album in albums:
-        preview_images = [ai.image for ai in album.images[:4]]  # Preview images
+        # Process preview images with proper tag serialization
+        preview_images = []
+        for ai in album.images[:4]:  # Preview images
+            image = ai.image
+            # Convert ImageTag objects to tag names
+            tag_names = [tag.tag.name for tag in image.tags] if hasattr(image, 'tags') else []
+            
+            # Create image dict with proper tags
+            image_dict = {
+                "id": image.id,
+                "title": image.title,
+                "description": image.description,
+                "filename": image.filename,
+                "original_filename": image.original_filename,
+                "file_size": image.file_size,
+                "file_type": image.file_type,
+                "width": image.width,
+                "height": image.height,
+                "url": image.url,
+                "thumbnail_url": image.thumbnail_url,
+                "medium_url": image.medium_url,
+                "large_url": image.large_url,
+                "delete_hash": image.delete_hash,
+                "privacy": image.privacy,
+                "views": image.views,
+                "is_nsfw": image.is_nsfw,
+                "owner_id": image.owner_id,
+                "created_at": image.created_at,
+                "updated_at": image.updated_at,
+                "like_count": image.like_count,
+                "tags": tag_names
+            }
+            preview_images.append(image_dict)
+        
         album_data = {
             "id": album.id,
             "title": album.title,
@@ -157,7 +255,39 @@ def read_album(
     db.refresh(album)
     
     # Build response without modifying the model
-    images = [ai.image for ai in album.images]
+    images = []
+    for ai in album.images:
+        image = ai.image
+        # Convert ImageTag objects to tag names
+        tag_names = [tag.tag.name for tag in image.tags] if hasattr(image, 'tags') else []
+        
+        # Create image dict with proper tags
+        image_dict = {
+            "id": image.id,
+            "title": image.title,
+            "description": image.description,
+            "filename": image.filename,
+            "original_filename": image.original_filename,
+            "file_size": image.file_size,
+            "file_type": image.file_type,
+            "width": image.width,
+            "height": image.height,
+            "url": image.url,
+            "thumbnail_url": image.thumbnail_url,
+            "medium_url": image.medium_url,
+            "large_url": image.large_url,
+            "delete_hash": image.delete_hash,
+            "privacy": image.privacy,
+            "views": image.views,
+            "is_nsfw": image.is_nsfw,
+            "owner_id": image.owner_id,
+            "created_at": image.created_at,
+            "updated_at": image.updated_at,
+            "like_count": image.like_count,
+            "tags": tag_names
+        }
+        images.append(image_dict)
+    
     album_response = {
         "id": album.id,
         "title": album.title,
@@ -210,7 +340,39 @@ def update_album(
     db.refresh(album)
     
     # Build response without modifying the model
-    images = [ai.image for ai in album.images]
+    images = []
+    for ai in album.images:
+        image = ai.image
+        # Convert ImageTag objects to tag names
+        tag_names = [tag.tag.name for tag in image.tags] if hasattr(image, 'tags') else []
+        
+        # Create image dict with proper tags
+        image_dict = {
+            "id": image.id,
+            "title": image.title,
+            "description": image.description,
+            "filename": image.filename,
+            "original_filename": image.original_filename,
+            "file_size": image.file_size,
+            "file_type": image.file_type,
+            "width": image.width,
+            "height": image.height,
+            "url": image.url,
+            "thumbnail_url": image.thumbnail_url,
+            "medium_url": image.medium_url,
+            "large_url": image.large_url,
+            "delete_hash": image.delete_hash,
+            "privacy": image.privacy,
+            "views": image.views,
+            "is_nsfw": image.is_nsfw,
+            "owner_id": image.owner_id,
+            "created_at": image.created_at,
+            "updated_at": image.updated_at,
+            "like_count": image.like_count,
+            "tags": tag_names
+        }
+        images.append(image_dict)
+    
     album_response = {
         "id": album.id,
         "title": album.title,

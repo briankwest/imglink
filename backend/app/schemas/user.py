@@ -29,9 +29,11 @@ class UserInDBBase(UserBase):
     is_active: bool
     is_verified: bool
     is_superuser: bool
-    tier: str = "standard"
+    tier: Optional[str] = "standard"
     created_at: datetime
     updated_at: datetime
+    followers_count: Optional[int] = 0
+    following_count: Optional[int] = 0
 
 
 class User(UserInDBBase):

@@ -80,7 +80,7 @@ export default function AdminPage() {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       }
       
-      const response = await axios.get('/api/v1/admin/stats')
+      const response = await axios.get('http://localhost:8000/api/v1/admin/stats')
       setStats(response.data)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load admin data')
@@ -97,7 +97,7 @@ export default function AdminPage() {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       }
       
-      const response = await axios.get('/api/v1/admin/users')
+      const response = await axios.get('http://localhost:8000/api/v1/admin/users')
       setUsers(response.data)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load users')
@@ -112,7 +112,7 @@ export default function AdminPage() {
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       }
       
-      const response = await axios.get('/api/v1/admin/images')
+      const response = await axios.get('http://localhost:8000/api/v1/admin/images')
       setImages(response.data)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load images')

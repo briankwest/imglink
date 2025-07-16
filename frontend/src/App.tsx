@@ -26,6 +26,8 @@ import PrivacyPage from './pages/PrivacyPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import TagPage from './pages/TagPage'
+import FollowersPage from './pages/FollowersPage'
+import FollowingPage from './pages/FollowingPage'
 
 function App() {
   return (
@@ -40,6 +42,9 @@ function App() {
             <Route path="upload" element={<UploadPage />} />
             <Route path="image/:id" element={<ImagePage />} />
             <Route path="user/:username" element={<ProfilePage />} />
+            <Route path="users/:username" element={<ProfilePage />} />
+            <Route path="users/:username/followers" element={<FollowersPage />} />
+            <Route path="users/:username/following" element={<FollowingPage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="verify-email" element={<VerifyEmailPage />} />
             <Route path="forgot-password" element={<ForgotPasswordPage />} />
